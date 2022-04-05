@@ -1,6 +1,7 @@
 import cv2 
 import datetime
 import matplotlib.pyplot as plt
+from adjustText import adjust_text
 
 MD_axis_coordinate_dict = {
     5:[90,122],     # 5-4
@@ -57,7 +58,7 @@ PSD_axis_coordinate_dict = {
 def generate_report(one_eye_dict):
 
     img = cv2.imread("glaucoma-staging.png")
-
+    plt.figure(figsize=(16, 12), dpi=500)
     plt.imshow(img,alpha=0.3)
 
     x,y,label = [], [], []
@@ -80,11 +81,13 @@ def generate_report(one_eye_dict):
         print(MD,PSD)
         x.append(MD_coordinate)
         y.append(PSD_coordinate)
-        plt.scatter(MD_coordinate,PSD_coordinate,c='black')
-        plt.annotate(date.strftime('%Y-%m-%d'), (MD_coordinate,PSD_coordinate), c='black')
-
+        plt.scatter(MD_coordinate,PSD_coordinate,c='black', s=8)
+        # plt.annotate(date.strftime('%Y-%m-%d'), (MD_coordinate,PSD_coordinate), c='black')
+    texts = [plt.text(x[i], y[i], dates[i].strftime('%Y-%m-%d'),fontsize=8) for i in range(len(x))] 
+    adjust_text(texts, arrowprops=dict(arrowstyle="->", color='red', lw=0.5))
     plt.plot(x,y,c='black')
-    plt.show()
+    plt.savefig('test.png')
+    # plt.show()
     return 
 
 if __name__ == "__main__":

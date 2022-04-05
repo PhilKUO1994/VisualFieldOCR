@@ -8,39 +8,78 @@ import easyocr
 import matplotlib.pyplot as plt
 import pytesseract
 from utils.generate_report import generate_report 
+from paddleocr import PaddleOCR
 
-pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
+
+pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files (x86)\Tesseract-OCR\tesseract.exe'
 COMMON_CHRS = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '.', '-']
+paddleocr=PaddleOCR(enable_mkldnn=True,use_tensorrt=True, use_angle_cls = True,use_gpu= False) 
 def extract_eye(text):
     """
     Input: OCR-ed text
     Output: 0 for left and 1 for right
     """
-    idx = text.find('Eye:')
-    text_nearby = text[idx: idx+10]
-    # Eye: Right
-    if 'Left' in text_nearby:
-        return 0
-    elif 'Right' in text_nearby:
-        return 1
+    if 'Eye:' in text:
+        idx = text.find('Eye:')
+        text_nearby = text[idx: idx+10]
+        # Eye: Right
+        if 'Left' in text_nearby:
+            return 0
+        elif 'Right' in text_nearby:
+            return 1
+        else:
+            return -1
     else:
-        return -1
-
+        if 'OD' in text:
+            return 1
+        elif 'OS' in text:
+            return 0
+        else:
+            return -1
 
 def extract_date(text):
     try:
-        idx = text.find('Date:')
-        text_nearby = text[idx+6: idx+17]
-        date_str = text_nearby.strip()
-        if date_str.find('-') >= 4:
-            # YYYY-MM-DD
-            date = datetime.strptime(date_str, "%Y-%m-%d")
-        else:
-            # MM-DD-YYYY
-            date = datetime.strptime(date_str, "%m-%d-%Y")
-        return date
+        if 'Date:' in text:
+            idx = text.find('Date:')
+            text_nearby = text[idx+6: idx+17].replace('，', ',')
+            date_str = text_nearby.strip()
+            if date_str.find('-') >= 4:
+                # YYYY-MM-DD
+                date = datetime.strptime(date_str, "%Y-%m-%d")
+            elif ',' in date_str:
+                text_nearby = text[idx+6: idx+19].replace('，', ',')
+                date_str = text_nearby.strip()
+                if 'Sept' in date_str:
+                    space_idx = 4
+                else:
+                    space_idx = 3
+
+                if date_str[space_idx] != ' ':
+                    date_str = date_str[:space_idx] + ' ' + date_str[space_idx:]
+                print(date_str)
+                date = datetime.strptime(date_str, "%b %d,%Y")
+            else:
+                # MM-DD-YYYY
+                date = datetime.strptime(date_str, "%m-%d-%Y")
+            return date
+
+
+        if '出生日期' in text:
+            idx = text[text.find('出生日期')+10:].find('日期') + text.find('出生日期')+10
+            print('+=======================')
+            print(idx)
+            text_nearby = text[idx+5: idx+15]
+            print(text_nearby)
+            date_str = text_nearby.strip()
+            if date_str.find('/') >= 4:
+                # YYYY/MM/DD
+                date = datetime.strptime(date_str, "%Y/%m/%d")
+            else:
+                # MM-DD-YYYY
+                date = datetime.strptime(date_str, "%m/%d/%Y")
+            return date
     except:
-        return False
+        pass
 
 def extract_vfi(text):
     idx = text.find('VFI')
@@ -74,7 +113,7 @@ def extract_md_psd(text):
     else:
         return False, False
 
-test_dir = './test/'
+test_dir = './test2/'
 reader = easyocr.Reader(['en'], gpu=False)
 
 ocr_result_dict = {
@@ -90,7 +129,6 @@ for imgname in os.listdir(test_dir):
         img = cv2.imread(test_dir + imgname)
         img_gray = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
         text = pytesseract.image_to_string(img)
-
         print('=============', imgname, '================')
         MD, PSD = extract_md_psd(text)
         eye_side = extract_eye(text)
@@ -98,11 +136,12 @@ for imgname in os.listdir(test_dir):
 
         # use easyOCR to supplment the results
         if not MD or eye_side==-1 or not date: 
-            recong_texts = reader.readtext(img_gray)
+            #recong_texts = reader.readtext(img_gray)
+            recong_texts = paddleocr.ocr(img_gray, cls=True)
             text = ''
             for object in recong_texts:
-                text += ' ' + object[1] + ' '
-
+                text += ' ' + str(object[1][0]) + ' '
+            print(text)
             if not MD:
                 MD, PSD = extract_md_psd(text)
             if eye_side==-1:
@@ -119,5 +158,6 @@ for imgname in os.listdir(test_dir):
             ocr_result_dict[eye_side][date] = [MD, PSD]
 
 generate_report(ocr_result_dict[0])
+generate_report(ocr_result_dict[1])
 
 print(ocr_result_dict)
