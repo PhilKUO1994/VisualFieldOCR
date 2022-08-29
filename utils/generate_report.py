@@ -83,8 +83,10 @@ def generate_report(one_eye_dict):
         y.append(PSD_coordinate)
         plt.scatter(MD_coordinate,PSD_coordinate,c='black', s=8)
         # plt.annotate(date.strftime('%Y-%m-%d'), (MD_coordinate,PSD_coordinate), c='black')
-    texts = [plt.text(x[i], y[i], dates[i].strftime('%Y-%m-%d'),fontsize=8) for i in range(len(x))] 
-    adjust_text(texts, arrowprops=dict(arrowstyle="->", color='red', lw=0.5))
+    # texts = [plt.text(x[i], y[i], dates[i].strftime('%Y-%m-%d'),fontsize=8) for i in range(len(x))] 
+    texts = [plt.text(x[i], y[i], int(i)) for i in range(len(x))] 
+
+    adjust_text(texts, arrowprops=dict(arrowstyle="-", color='red', lw=0.5))
     plt.plot(x,y,c='black')
     plt.savefig('test.png')
     # plt.show()

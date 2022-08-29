@@ -124,7 +124,6 @@ ocr_result_dict = {
 for imgname in os.listdir(test_dir):
     if 'jpg' in imgname or 'png' in imgname:
         
-        
         # use Tessert
         img = cv2.imread(test_dir + imgname)
         img_gray = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
@@ -152,7 +151,6 @@ for imgname in os.listdir(test_dir):
         print('MD, PSD: ', MD, PSD)
         print('Eye: ', eye_side)
         print('Date: ', date)
-
 
         if eye_side != -1:
             ocr_result_dict[eye_side][date] = [MD, PSD]
