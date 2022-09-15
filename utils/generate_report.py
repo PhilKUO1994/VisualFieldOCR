@@ -1,6 +1,7 @@
 import cv2 
 import datetime
 import matplotlib.pyplot as plt
+from matplotlib import gridspec
 from adjustText import adjust_text
 
 MD_axis_coordinate_dict = {
@@ -55,17 +56,20 @@ PSD_axis_coordinate_dict = {
 }
 
 
-def generate_report(one_eye_dict):
+def generate_report(one_eye_dict, to_save_path, group_type_bool=False):
 
     img = cv2.imread("glaucoma-staging.png")
-    plt.figure(figsize=(16, 12), dpi=500)
-    plt.imshow(img,alpha=0.3)
+    fig = plt.figure(figsize=(18, 12), dpi=400)
+    spec = gridspec.GridSpec(ncols=1, nrows=2,
+                            height_ratios=[8, 1])
+
+    ax0 = fig.add_subplot(spec[0])
+    ax0.imshow(img, alpha=0.3)
 
     x,y,label = [], [], []
     dates = list(one_eye_dict.keys())
     dates.sort()
     for date in dates:
-        print(date)
         MD, PSD = one_eye_dict[date]
 
         MD_keys = list(MD_axis_coordinate_dict.keys())
@@ -78,17 +82,33 @@ def generate_report(one_eye_dict):
         for i in range(len(PSD_keys)-1):
             if PSD_keys[i] <= PSD and PSD_keys[i+1] > PSD:
                 PSD_coordinate = (PSD-PSD_keys[i])/(PSD_keys[i+1] - PSD_keys[i]) * (PSD_axis_coordinate_dict[PSD_keys[i]][1] - PSD_axis_coordinate_dict[PSD_keys[i]][0]) + PSD_axis_coordinate_dict[PSD_keys[i]][0]
-        print(MD,PSD)
         x.append(MD_coordinate)
         y.append(PSD_coordinate)
-        plt.scatter(MD_coordinate,PSD_coordinate,c='black', s=8)
+        ax0.scatter(MD_coordinate,PSD_coordinate,c='black', s=8)
         # plt.annotate(date.strftime('%Y-%m-%d'), (MD_coordinate,PSD_coordinate), c='black')
     # texts = [plt.text(x[i], y[i], dates[i].strftime('%Y-%m-%d'),fontsize=8) for i in range(len(x))] 
-    texts = [plt.text(x[i], y[i], int(i)) for i in range(len(x))] 
+    if not group_type_bool:
+        # put index onto plot
+        texts = [plt.text(x[i], y[i], int(i), fontsize=16) for i in range(len(x))] 
+        adjust_text(texts, arrowprops=dict(arrowstyle="-", color='red', lw=0.5))
+        ax0.plot(x,y,c='black')
 
-    adjust_text(texts, arrowprops=dict(arrowstyle="-", color='red', lw=0.5))
-    plt.plot(x,y,c='black')
-    plt.savefig('test.png')
+        ax1 = fig.add_subplot(spec[1])
+        table_values = []
+        idx = 0
+        for per_date in one_eye_dict.keys():
+            table_values.append([idx, per_date.strftime("%m/%d/%Y"), one_eye_dict[per_date][0], one_eye_dict[per_date][1]])
+            idx += 1
+        ax1.table(table_values, colLabels=['Index', 'DATE', 'MD', 'PSD'])
+        ax1.get_xaxis().set_visible(False)
+        ax1.get_yaxis().set_visible(False)
+        ax1.axis('off')
+
+    # hide the axis display
+    ax0.get_xaxis().set_visible(False)
+    ax0.get_yaxis().set_visible(False)
+
+    plt.savefig(to_save_path)
     # plt.show()
     return 
 
